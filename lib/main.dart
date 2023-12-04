@@ -1,15 +1,49 @@
+import 'package:bravozone/assign_task.dart';
 import 'package:bravozone/person.dart';
+import 'package:bravozone/register_employee.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 var dbName = 'bravozonedb';
+
+class DarkThemePreference {
+  static const THEME_STATUS = "THEMESTATUS";
+
+  setDarkTheme(bool value) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool(THEME_STATUS, value);
+  }
+
+  Future<bool> getTheme() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(THEME_STATUS) ?? false;
+  }
+}
+
+class DarkThemeProvider with ChangeNotifier {
+  DarkThemePreference darkThemePreference = DarkThemePreference();
+  bool _darkTheme = false;
+
+  bool get darkTheme => _darkTheme;
+
+  set darkTheme(bool value) {
+    _darkTheme = value;
+    darkThemePreference.setDarkTheme(value);
+    notifyListeners();
+  }
+}
 
 void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter<Person>(PersonAdapter());
   Hive.registerAdapter<Role>(RoleAdapter());
+  Hive.registerAdapter<Task>(TaskAdapter());
   await Hive.openBox<Person>(dbName);
 
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,42 +56,82 @@ class MyApp extends StatefulWidget {
 
   @override
   State<MyApp> createState() => _MyAppState();
-
-  // ignore: library_private_types_in_public_api
-  static _MyAppState of(BuildContext context) =>
-      context.findAncestorStateOfType<_MyAppState>()!;
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  DarkThemeProvider themeChangeProvider = DarkThemeProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    getCurrentAppTheme();
+  }
+
+  void getCurrentAppTheme() async {
+    themeChangeProvider.darkTheme =
+        await themeChangeProvider.darkThemePreference.getTheme();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'BravoZone',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightGreen),
-        brightness: Brightness.light,
-        useMaterial3: true,
-      ),
-      themeMode: _themeMode,
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xff73dd6e), brightness: Brightness.dark),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (_) {
+        return themeChangeProvider;
+      },
+      child: Consumer<DarkThemeProvider>(builder:
+          (BuildContext context, DarkThemeProvider value, Widget? child) {
+        return MaterialApp(
+          title: 'BravoZone',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.lightGreen, brightness: Brightness.light),
+            brightness: Brightness.light,
+            useMaterial3: true,
+          ),
+          themeMode:
+              themeChangeProvider.darkTheme ? ThemeMode.dark : ThemeMode.light,
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xff73dd6e),
+                brightness: Brightness.dark),
+            useMaterial3: true,
 
-        /* dark theme settings */
-      ),
-      debugShowCheckedModeBanner: false,
-      home: const MyHomePage(),
+            /* dark theme settings */
+          ),
+          debugShowCheckedModeBanner: false,
+          home: const MyHomePage(),
+        );
+      }),
     );
   }
+}
 
-  void changeTheme(ThemeMode themeMode) {
-    setState(() {
-      _themeMode = themeMode;
-    });
+class _Example01Tile extends StatelessWidget {
+  const _Example01Tile({this.background, this.iconData, this.child});
+  final Color? background;
+  final IconData? iconData;
+  final Widget? child;
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: background ?? Theme.of(context).colorScheme.background,
+      child: InkWell(
+        onTap: () {},
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: iconData != null
+                ? Icon(
+                    iconData,
+                    size: 30,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  )
+                : child,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -71,15 +145,28 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int currentPageIndex = 0;
 
-  final List<String> _labels = ['Home', 'Leaderboard', 'Employee', 'Tasks'];
+  final List<String> _labels = ['Home', 'Leaderboard', 'Employees', 'Tasks'];
 
   List<String> _people = ["MHMD", "AHMD"];
+  String greeting() {
+    var hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Morning';
+    }
+    if (hour < 17) {
+      return 'Afternoon';
+    }
+    return 'Evening';
+  }
 
   Widget bodyPages(BuildContext context, int pageIndex) {
+    final themeChange = Provider.of<DarkThemeProvider>(context);
     return [
       Padding(
         padding: const EdgeInsets.all(8.0),
         child: ListView(
+          scrollDirection: Axis.vertical,
+          shrinkWrap: true,
           children: [
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -92,18 +179,89 @@ class _MyHomePageState extends State<MyHomePage> {
                     title: Center(
                       child: RichText(
                           text: TextSpan(
-                              style: Theme.of(context).textTheme.displaySmall,
-                              children: const [
-                            TextSpan(text: "Welcome Back, "),
-                            TextSpan(
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 50,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onBackground),
+                              children: [
+                            TextSpan(text: "Good ${greeting()}, "),
+                            const TextSpan(
                                 text: "Mhmd",
-                                style: TextStyle(fontWeight: FontWeight.bold))
+                                style: TextStyle(fontWeight: FontWeight.bold)),
                           ])),
                     ),
                   ),
                 ],
               ),
-            )
+            ),
+            SizedBox(
+                height: MediaQuery.of(context).size.width,
+                child: StaggeredGrid.count(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                  children: [
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 2,
+                      mainAxisCellCount: 2,
+                      child: _Example01Tile(
+                          background: themeChange.darkTheme == true
+                              ? const Color.fromARGB(255, 40, 63, 82)
+                              : const Color.fromARGB(255, 178, 220, 255),
+                          child: const SizedBox(
+                            height: 150,
+                            child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text("1", style: TextStyle(fontSize: 80)),
+                                  Text("Row"),
+                                ]),
+                          )),
+                    ),
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 2,
+                      mainAxisCellCount: 1,
+                      child: _Example01Tile(
+                        background: themeChange.darkTheme == true
+                            ? const Color.fromARGB(255, 91, 132, 45)
+                            : Colors.lightGreenAccent,
+                        child: const SizedBox(
+                          height: 130,
+                          child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text("\$40", style: TextStyle(fontSize: 30)),
+                                Text("Expenses"),
+                              ]),
+                        ),
+                      ),
+                    ),
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 1,
+                      mainAxisCellCount: 1,
+                      child: _Example01Tile(
+                        background: Colors.white,
+                        child:
+                            Image.network('https://picsum.photos/250?image=9'),
+                      ),
+                    ),
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 1,
+                      mainAxisCellCount: 1,
+                      child: _Example01Tile(
+                          iconData: Icons.people, background: Colors.redAccent),
+                    ),
+                    StaggeredGridTile.count(
+                      crossAxisCellCount: 4,
+                      mainAxisCellCount: 2,
+                      child: _Example01Tile(
+                        // iconData: Icons.image_outlined,
+                        child: barchartWidget(context),
+                      ),
+                    ),
+                  ],
+                ))
           ],
         ),
       ),
@@ -112,44 +270,7 @@ class _MyHomePageState extends State<MyHomePage> {
           padding: const EdgeInsets.all(24),
           child: AspectRatio(
             aspectRatio: 2,
-            child: BarChart(
-              BarChartData(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (i, _) =>
-                                Text(_people[i.toInt()])))),
-                barGroups: [
-                  generateGroupData(0, 10),
-                  generateGroupData(1, 15),
-                ],
-                barTouchData: BarTouchData(
-                    enabled: true,
-                    handleBuiltInTouches: false,
-                    touchCallback: (event, response) {
-                      if (response != null &&
-                          response.spot != null &&
-                          event is FlTapUpEvent) {
-                        setState(() {
-                          final x = response.spot!.touchedBarGroup.x;
-                          final isShowing = showingTooltip == x;
-                          if (isShowing) {
-                            showingTooltip = -1;
-                          } else {
-                            showingTooltip = x;
-                          }
-                        });
-                      }
-                    },
-                    mouseCursorResolver: (event, response) {
-                      return response == null || response.spot == null
-                          ? MouseCursor.defer
-                          : SystemMouseCursors.click;
-                    }),
-              ),
-            ),
+            child: barchartWidget(context),
           ),
         ),
       ),
@@ -159,7 +280,8 @@ class _MyHomePageState extends State<MyHomePage> {
             valueListenable: Hive.box<Person>(dbName).listenable(),
             builder: (context, Box<Person> box, _) {
               if (box.values.isEmpty) {
-                return const Center(child: Text("No contacts"));
+                return const Center(
+                    child: Text("There's No Registered Employees :("));
               }
               return ListView.separated(
                 itemCount: box.values.length,
@@ -175,6 +297,33 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: ListTile(
+                        onTap: () => Navigator.push(context,
+                            MaterialPageRoute(builder: (context) {
+                          return Scaffold(
+                              appBar: AppBar(
+                                title: const Text("Info"),
+                              ),
+                              body: Column(
+                                children: [
+                                  Text(currentPerson.name),
+                                  Text(currentPerson.bio!),
+                                  Text(currentPerson.phoneNumber!.toString()),
+                                  Text(currentPerson.email!),
+                                  if (currentPerson.role == Role.employee)
+                                    const Icon(Icons.person),
+                                  if (currentPerson.role == Role.admin)
+                                    const Icon(Icons.manage_accounts),
+                                  IconButton(
+                                      onPressed: () {
+                                        box.deleteAt(index);
+                                        setState(() {});
+                                        Navigator.pop(context);
+                                      },
+                                      icon: const Icon(
+                                          Icons.delete_forever_outlined)),
+                                ],
+                              ));
+                        })),
                         tileColor:
                             Theme.of(context).colorScheme.secondaryContainer,
                         leading: CircleAvatar(
@@ -201,6 +350,46 @@ class _MyHomePageState extends State<MyHomePage> {
     ][pageIndex];
   }
 
+  BarChart barchartWidget(BuildContext context) {
+    return BarChart(
+      BarChartData(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (i, _) => Text(_people[i.toInt()])))),
+        barGroups: [
+          generateGroupData(0, 10),
+          generateGroupData(1, 15),
+        ],
+        barTouchData: BarTouchData(
+            enabled: true,
+            handleBuiltInTouches: false,
+            touchCallback: (event, response) {
+              if (response != null &&
+                  response.spot != null &&
+                  event is FlTapUpEvent) {
+                setState(() {
+                  final x = response.spot!.touchedBarGroup.x;
+                  final isShowing = showingTooltip == x;
+                  if (isShowing) {
+                    showingTooltip = -1;
+                  } else {
+                    showingTooltip = x;
+                  }
+                });
+              }
+            },
+            mouseCursorResolver: (event, response) {
+              return response == null || response.spot == null
+                  ? MouseCursor.defer
+                  : SystemMouseCursors.click;
+            }),
+      ),
+    );
+  }
+
   late int showingTooltip;
 
   @override
@@ -218,69 +407,44 @@ class _MyHomePageState extends State<MyHomePage> {
             toY: y.toDouble(),
             width: 20,
             borderRadius: BorderRadius.circular(2),
-            color: Theme.of(context).colorScheme.primary),
+            color: Theme.of(context).colorScheme.primaryContainer),
       ],
     );
   }
 
-  Future<void> _registerEmployee() async {
-    var box = await Hive.openBox<Person>(dbName);
-    var person =
-        Person('Mhmd', 00404044, 'hello', Role.admin, 'mhmd@gmail.com');
-
-    box.add(person);
-  }
-
-  void _assignAssignment() {}
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-          leading: PopupMenuButton(
-            icon: const Icon(Icons.more_vert),
-            itemBuilder: (context) {
-              return [
-                const PopupMenuItem(
-                    child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [Icon(Icons.settings_outlined), Text('Settings')],
-                ))
-              ];
-            },
-          ),
-          centerTitle: true,
-          title: Text(_labels[currentPageIndex]),
-          actions: [
-            Switch(
-                thumbIcon: MaterialStateProperty.resolveWith<Icon?>(
-                    (Set<MaterialState> states) {
-                  if (states.contains(MaterialState.selected)) {
-                    return const Icon(Icons.dark_mode);
-                  }
-                  return const Icon(Icons
-                      .light_mode); // All other states will use the default thumbIcon.
-                }),
-                value: MyApp.of(context)._themeMode == ThemeMode.light
-                    ? false
-                    : true,
-                onChanged: (value) {
-                  setState(() {
-                    if (value == false) {
-                      MyApp.of(context).changeTheme(ThemeMode.light);
-                    } else if (value == true) {
-                      MyApp.of(context).changeTheme(ThemeMode.dark);
-                    }
-                  });
-                }),
-            IconButton(
-                icon: const Icon(Icons.account_circle_outlined),
-                onPressed: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (context) {
-                      return const ProfilePage();
-                    })))
-          ]),
+      appBar: MediaQuery.of(context).size.width < 600
+          ? AppBar(
+              leading: PopupMenuButton(
+                icon: const Icon(Icons.settings_outlined),
+                itemBuilder: (context) {
+                  return [
+                    const PopupMenuItem(
+                        child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Icon(Icons.settings_outlined),
+                        Text('Settings')
+                      ],
+                    ))
+                  ];
+                },
+              ),
+              centerTitle: true,
+              title: Text(_labels[currentPageIndex]),
+              actions: [
+                  themeModeSwitch(context),
+                  IconButton(
+                      icon: const Icon(Icons.account_circle_outlined),
+                      onPressed: () => Navigator.push(context,
+                              MaterialPageRoute(builder: (context) {
+                            return const ProfilePage();
+                          })))
+                ])
+          : null,
       bottomNavigationBar: MediaQuery.of(context).size.width < 600
           ? NavigationBar(
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -329,10 +493,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
                 labelType: NavigationRailLabelType.selected,
                 leading: floatingButton(),
-                trailing: IconButton(
-                  icon: Icon(Icons.more_horiz),
-                  onPressed: () {},
-                ),
+                trailing: themeModeSwitch(context),
                 destinations: const <NavigationRailDestination>[
                   NavigationRailDestination(
                     selectedIcon: Icon(Icons.home),
@@ -355,7 +516,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       label: Text('Tasks')),
                 ],
               ),
-              const VerticalDivider(thickness: 1, width: 1),
+
               // This is the main content.
               Expanded(child: bodyPages(context, currentPageIndex))
             ],
@@ -367,12 +528,42 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Switch themeModeSwitch(BuildContext context) {
+    final themeChangeProvider = Provider.of<DarkThemeProvider>(context);
+    return Switch(
+        thumbIcon: MaterialStateProperty.resolveWith<Icon?>(
+            (Set<MaterialState> states) {
+          if (states.contains(MaterialState.selected)) {
+            return const Icon(Icons.dark_mode);
+          }
+          return const Icon(Icons
+              .light_mode); // All other states will use the default thumbIcon.
+        }),
+        value: themeChangeProvider.darkTheme,
+        onChanged: (value) {
+          setState(() {
+            themeChangeProvider.darkTheme = !themeChangeProvider.darkTheme;
+          });
+        });
+  }
+
   Widget? floatingButton() {
     if (currentPageIndex == 2 || currentPageIndex == 3) {
       return FloatingActionButton(
         elevation: MediaQuery.of(context).size.width < 600 ? 6 : 0,
-        onPressed:
-            currentPageIndex == 2 ? _registerEmployee : _assignAssignment,
+        onPressed: () {
+          if (currentPageIndex == 2) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const RegisterEmployeePage()));
+          } else {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const AssignTaskPage()));
+          }
+        },
         tooltip:
             currentPageIndex == 2 ? 'Add an Employee' : 'Asign an Assignment',
         child: Icon(
@@ -403,7 +594,7 @@ class ProfilePage extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
             ),
-          )
+          ),
         ]),
       ),
     );

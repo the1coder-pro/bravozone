@@ -22,13 +22,13 @@ class PersonAdapter extends TypeAdapter<Person> {
       fields[4] as String?,
       fields[3] as Role,
       fields[1] as String?,
-    );
+    )..tasks = (fields[5] as List?)?.cast<Task>();
   }
 
   @override
   void write(BinaryWriter writer, Person obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -38,7 +38,9 @@ class PersonAdapter extends TypeAdapter<Person> {
       ..writeByte(3)
       ..write(obj.role)
       ..writeByte(4)
-      ..write(obj.bio);
+      ..write(obj.bio)
+      ..writeByte(5)
+      ..write(obj.tasks);
   }
 
   @override
@@ -48,6 +50,52 @@ class PersonAdapter extends TypeAdapter<Person> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is PersonAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class TaskAdapter extends TypeAdapter<Task> {
+  @override
+  final int typeId = 2;
+
+  @override
+  Task read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return Task(
+      fields[0] as String,
+      fields[1] as String?,
+      fields[2] as DateTime?,
+      fields[3] as DateTime?,
+      fields[4] as Person?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, Task obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.title)
+      ..writeByte(1)
+      ..write(obj.content)
+      ..writeByte(2)
+      ..write(obj.startTime)
+      ..writeByte(3)
+      ..write(obj.endTime)
+      ..writeByte(4)
+      ..write(obj.assignedTo);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
