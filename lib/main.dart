@@ -84,7 +84,8 @@ class _MyAppState extends State<MyApp> {
           title: 'BravoZone',
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.lightGreen, brightness: Brightness.light),
+                seedColor: const Color(0xFFd9e957),
+                brightness: Brightness.light),
             brightness: Brightness.light,
             useMaterial3: true,
           ),
@@ -108,16 +109,19 @@ class _MyAppState extends State<MyApp> {
 }
 
 class _Example01Tile extends StatelessWidget {
-  const _Example01Tile({this.background, this.iconData, this.child});
+  const _Example01Tile(
+      {this.background, this.iconData, this.child, this.onTap});
   final Color? background;
   final IconData? iconData;
   final Widget? child;
+  final void Function()? onTap;
+
   @override
   Widget build(BuildContext context) {
     return Card(
       color: background ?? Theme.of(context).colorScheme.background,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(4.0),
@@ -179,7 +183,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     title: Center(
                       child: RichText(
                           text: TextSpan(
-                              style: GoogleFonts.ibmPlexSansArabic(
+                              style: GoogleFonts.playfairDisplay(
+                                  // style: GoogleFonts.ibmPlexSerif(
                                   fontSize: 50,
                                   color: Theme.of(context)
                                       .colorScheme
@@ -206,16 +211,27 @@ class _MyHomePageState extends State<MyHomePage> {
                       crossAxisCellCount: 2,
                       mainAxisCellCount: 2,
                       child: _Example01Tile(
-                          background: themeChange.darkTheme == true
-                              ? const Color.fromARGB(255, 40, 63, 82)
-                              : const Color.fromARGB(255, 178, 220, 255),
-                          child: const SizedBox(
+                          background: themeChange.darkTheme
+                              ? const Color(0xFF667dd1)
+                              : const Color(0xFF123496),
+                          child: SizedBox(
                             height: 150,
                             child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text("1", style: TextStyle(fontSize: 80)),
-                                  Text("Row"),
+                                  Text("1",
+                                      style: TextStyle(
+                                          fontSize: 80,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .background)),
+                                  Text(
+                                    "Row",
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .background),
+                                  ),
                                 ]),
                           )),
                     ),
@@ -223,9 +239,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       crossAxisCellCount: 2,
                       mainAxisCellCount: 1,
                       child: _Example01Tile(
-                        background: themeChange.darkTheme == true
-                            ? const Color.fromARGB(255, 91, 132, 45)
-                            : Colors.lightGreenAccent,
+                        background: themeChange.darkTheme
+                            ? const Color(0xFF084d31)
+                            : const Color(0xFFB4DC19),
                         child: const SizedBox(
                           height: 130,
                           child: Column(
@@ -237,20 +253,59 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       ),
                     ),
+                    // StaggeredGridTile.count(
+                    //     crossAxisCellCount: 1,
+                    //     mainAxisCellCount: 1,
+                    //     child: Padding(
+                    //       padding: const EdgeInsets.all(4),
+                    //       child: Container(
+                    //         // Add box decoration
+                    //         decoration: BoxDecoration(
+                    //           borderRadius: BorderRadius.circular(10),
+                    //           // Box decoration takes a gradient
+                    //           gradient: const LinearGradient(
+                    //             // Where the linear gradient begins and ends
+                    //             begin: Alignment.topRight,
+                    //             end: Alignment.bottomLeft,
+                    //             // Add one stop for each color. Stops should increase from 0 to 1
+                    //             stops: [0.3, 0.4, 0.9],
+                    //             colors: [
+                    //               // Colors are easy thanks to Flutter's Colors class.
+                    //               Color(0xFF4b9235),
+                    //               Color(0xFFB4DC19),
+                    //               Color(0xFFca9bf0)
+                    //             ],
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     )),
                     StaggeredGridTile.count(
                       crossAxisCellCount: 1,
                       mainAxisCellCount: 1,
                       child: _Example01Tile(
-                        background: Colors.white,
-                        child:
-                            Image.network('https://picsum.photos/250?image=9'),
-                      ),
+                          iconData: Icons.assignment_outlined,
+                          onTap: () {
+                            setState(() {
+                              currentPageIndex = 3;
+                            });
+                          },
+                          background: themeChange.darkTheme
+                              ? const Color(0xFF7435b6)
+                              : const Color(0xFFbeadf4)),
                     ),
                     StaggeredGridTile.count(
                       crossAxisCellCount: 1,
                       mainAxisCellCount: 1,
                       child: _Example01Tile(
-                          iconData: Icons.people, background: Colors.redAccent),
+                          iconData: Icons.people,
+                          onTap: () {
+                            setState(() {
+                              currentPageIndex = 2;
+                            });
+                          },
+                          background: themeChange.darkTheme
+                              ? const Color(0xFFf13d70)
+                              : const Color(0xFFf53b48)),
                     ),
                     StaggeredGridTile.count(
                       crossAxisCellCount: 4,
@@ -280,8 +335,11 @@ class _MyHomePageState extends State<MyHomePage> {
             valueListenable: Hive.box<Person>(dbName).listenable(),
             builder: (context, Box<Person> box, _) {
               if (box.values.isEmpty) {
-                return const Center(
-                    child: Text("There's No Registered Employees :("));
+                return Center(
+                    child: Text(
+                  "No Employees",
+                  style: GoogleFonts.playfairDisplay(fontSize: 40),
+                ));
               }
               return ListView.separated(
                 itemCount: box.values.length,
@@ -289,64 +347,97 @@ class _MyHomePageState extends State<MyHomePage> {
                 itemBuilder: (context, index) {
                   Person? currentPerson = box.getAt(index);
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: Theme.of(context).colorScheme.secondaryContainer,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ListTile(
-                        onTap: () => Navigator.push(context,
-                            MaterialPageRoute(builder: (context) {
-                          return Scaffold(
-                              appBar: AppBar(
-                                title: const Text("Info"),
-                              ),
-                              body: Column(
-                                children: [
-                                  Text(currentPerson.name),
-                                  Text(currentPerson.bio!),
-                                  Text(currentPerson.phoneNumber!.toString()),
-                                  Text(currentPerson.email!),
-                                  if (currentPerson.role == Role.employee)
-                                    const Icon(Icons.person),
-                                  if (currentPerson.role == Role.admin)
-                                    const Icon(Icons.manage_accounts),
-                                  IconButton(
-                                      onPressed: () {
-                                        box.deleteAt(index);
-                                        setState(() {});
-                                        Navigator.pop(context);
-                                      },
-                                      icon: const Icon(
-                                          Icons.delete_forever_outlined)),
-                                ],
-                              ));
-                        })),
-                        tileColor:
-                            Theme.of(context).colorScheme.secondaryContainer,
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          child: Text(
-                            currentPerson!.name.substring(0, 1),
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimary),
+                  return ListTile(
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (context) {
+                      return Scaffold(
+                          appBar: AppBar(
+                            title: const Text("Info"),
                           ),
-                        ),
-                        title: Text(currentPerson.name),
-                        subtitle: Text(currentPerson.email.toString()),
+                          body: Column(
+                            children: [
+                              Text(currentPerson.name),
+                              Text(currentPerson.bio!),
+                              Text(currentPerson.phoneNumber!.toString()),
+                              Text(currentPerson.email!),
+                              if (currentPerson.role == Role.employee)
+                                const Icon(Icons.person),
+                              if (currentPerson.role == Role.admin)
+                                const Icon(Icons.manage_accounts),
+                              IconButton(
+                                  onPressed: () {
+                                    box.deleteAt(index);
+                                    setState(() {});
+                                    Navigator.pop(context);
+                                  },
+                                  icon: const Icon(
+                                      Icons.delete_forever_outlined)),
+                              if (currentPerson.tasks != null)
+                                for (var task in currentPerson.tasks!)
+                                  ListTile(
+                                    title: Text(task.title),
+                                  )
+                            ],
+                          ));
+                    })),
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: Text(
+                        currentPerson!.name.substring(0, 1),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary),
                       ),
                     ),
+                    title: Text(currentPerson.name),
+                    subtitle: Text(currentPerson.email.toString()),
                   );
                 },
               );
             }),
       ),
-      const Column(
-        children: [Text("hi 3")],
-      )
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ValueListenableBuilder(
+            valueListenable: Hive.box<Person>(dbName).listenable(),
+            builder: (context, Box<Person> box, _) {
+              if (box.values.isEmpty) {
+                return const Center(
+                    child: Text(
+                        "There's No Registered Employees to asign tasks to them :("));
+              }
+              List<Task> tasks = [];
+              for (var person
+                  in box.values.where((element) => element.tasks != null)) {
+                if (person.tasks != null && person.tasks!.isNotEmpty) {
+                  for (var task in person.tasks!.toList()) {
+                    tasks.add(task);
+                  }
+                }
+              }
+              if (tasks.isEmpty) {
+                return Center(
+                    child: Text(
+                  "No Tasks",
+                  style: GoogleFonts.playfairDisplay(fontSize: 40),
+                ));
+              }
+              return ListView.separated(
+                separatorBuilder: (_, __) => const Divider(),
+                itemCount: tasks.length,
+                itemBuilder: (context, index) {
+                  var task = tasks[index];
+
+                  return ListTile(
+                    title: Text(
+                      task.title,
+                    ),
+                    subtitle: Text(task.assignedTo!.name),
+                  );
+                },
+              );
+            }),
+      ),
+      const ProfilePage(),
     ][pageIndex];
   }
 
@@ -414,6 +505,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeChangeProvider = Provider.of<DarkThemeProvider>(context);
     return Scaffold(
       appBar: MediaQuery.of(context).size.width < 600
           ? AppBar(
@@ -485,7 +577,7 @@ class _MyHomePageState extends State<MyHomePage> {
             children: <Widget>[
               NavigationRail(
                 selectedIndex: currentPageIndex,
-                groupAlignment: 1.0,
+                groupAlignment: 1,
                 onDestinationSelected: (int index) {
                   setState(() {
                     currentPageIndex = index;
@@ -493,7 +585,20 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
                 labelType: NavigationRailLabelType.selected,
                 leading: floatingButton(),
-                trailing: themeModeSwitch(context),
+                trailing: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: IconButton.outlined(
+                    icon: Icon(themeChangeProvider.darkTheme
+                        ? Icons.dark_mode_outlined
+                        : Icons.light_mode_outlined),
+                    onPressed: () {
+                      setState(() {
+                        themeChangeProvider.darkTheme =
+                            !themeChangeProvider.darkTheme;
+                      });
+                    },
+                  ),
+                ),
                 destinations: const <NavigationRailDestination>[
                   NavigationRailDestination(
                     selectedIcon: Icon(Icons.home),
@@ -514,6 +619,10 @@ class _MyHomePageState extends State<MyHomePage> {
                       icon: Icon(Icons.assignment_outlined),
                       selectedIcon: Icon(Icons.assignment),
                       label: Text('Tasks')),
+                  NavigationRailDestination(
+                      icon: Icon(Icons.account_circle_outlined),
+                      selectedIcon: Icon(Icons.account_circle),
+                      label: Text('Profile')),
                 ],
               ),
 
@@ -553,15 +662,27 @@ class _MyHomePageState extends State<MyHomePage> {
         elevation: MediaQuery.of(context).size.width < 600 ? 6 : 0,
         onPressed: () {
           if (currentPageIndex == 2) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const RegisterEmployeePage()));
+            if (MediaQuery.of(context).size.width < 600) {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const RegisterEmployeePage()));
+            } else {
+              showDialog(
+                  context: context,
+                  builder: (context) => const RegisterEmployeePage());
+            }
           } else {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const AssignTaskPage()));
+            if (MediaQuery.of(context).size.width < 600) {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const AssignTaskPage()));
+            } else {
+              showDialog(
+                  context: context,
+                  builder: (context) => const AssignTaskPage());
+            }
           }
         },
         tooltip:

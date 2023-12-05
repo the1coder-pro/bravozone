@@ -44,10 +44,22 @@ class _RegisterEmployeePageState extends State<RegisterEmployeePage> {
         padding: const EdgeInsets.all(10),
         child: Column(
           children: [
-            TextFormField(controller: nameController),
-            TextFormField(controller: bioController),
-            TextFormField(controller: emailController),
-            TextFormField(controller: phoneController),
+            TextFormField(
+              controller: nameController,
+              decoration: const InputDecoration(label: Text("Name")),
+            ),
+            TextFormField(
+              controller: bioController,
+              decoration: const InputDecoration(label: Text("Bio")),
+            ),
+            TextFormField(
+              controller: emailController,
+              decoration: const InputDecoration(label: Text("Email")),
+            ),
+            TextFormField(
+              controller: phoneController,
+              decoration: const InputDecoration(label: Text("Phone")),
+            ),
           ],
         ),
       )),

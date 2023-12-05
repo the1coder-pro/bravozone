@@ -34,7 +34,8 @@ class Person extends HiveObject {
   @HiveField(5)
   List<Task>? tasks;
 
-  Person(this.name, this.phoneNumber, this.bio, this.role, this.email);
+  Person(this.name, this.phoneNumber, this.bio, this.role, this.email,
+      {this.tasks});
 }
 
 @HiveType(typeId: 2)

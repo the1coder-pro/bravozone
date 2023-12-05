@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'main.dart';
 import 'person.dart';
@@ -55,33 +56,58 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
         actions: [
           TextButton(
               onPressed: () async {
-                var box = Hive.box(dbName);
+                final box = Hive.box<Person>(dbName);
+                var indexOfEmployee = employees.indexOf(assignedToPerson!);
                 var newTask = Task(
                     titleController.text,
                     contentController.text,
                     DateTime.now(),
-                    DateTime.now().add(Duration(days: 10)),
+                    DateTime.now().add(const Duration(days: 10)),
                     assignedToPerson);
-                box.add(newTask);
+
+                box.putAt(
+                    indexOfEmployee,
+                    Person(
+                        assignedToPerson!.name,
+                        assignedToPerson!.phoneNumber,
+                        assignedToPerson!.bio,
+                        assignedToPerson!.role,
+                        assignedToPerson!.email,
+                        tasks: [newTask]));
+
                 Navigator.pop(context);
               },
               child: const Text("Save"))
         ],
       ),
       body: Center(
-          child: Column(
-        children: [
-          TextFormField(controller: titleController),
-          TextFormField(controller: contentController),
-          DropdownButton(
-            items: employeeMenuItems,
-            onChanged: (value) {
-              setState(() {
-                assignedToPerson = value;
-              });
-            },
-          ),
-        ],
+          child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            TextFormField(
+              controller: titleController,
+              decoration: const InputDecoration(label: Text("Title")),
+            ),
+            TextFormField(
+                controller: contentController,
+                minLines: 5,
+                maxLines: 10,
+                decoration: const InputDecoration(label: Text("Content"))),
+            Text(DateTime.now().toString()),
+            Text(DateTime.now().add(const Duration(days: 10)).toString()),
+            DropdownButton(
+              hint: const Text("Assign To"),
+              items: employeeMenuItems,
+              value: assignedToPerson,
+              onChanged: (value) {
+                setState(() {
+                  assignedToPerson = value;
+                });
+              },
+            ),
+          ],
+        ),
       )),
     );
   }
